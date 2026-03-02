@@ -71,7 +71,7 @@ def registry():
 
 
 def test_tool_set_matches(registry):
-    """Tool registry contains at least 65 tools (48 original + new capabilities)."""
+    """Tool registry contains at least 65 tools (48 original + new capabilities + Google services)."""
     schemas = registry.schemas()
     names = {t["function"]["name"] for t in schemas}
     assert len(names) >= 65, f"Expected >=65 tools, got {len(names)}: {sorted(names)}"

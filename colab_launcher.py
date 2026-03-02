@@ -163,29 +163,31 @@ if str(ANTHROPIC_API_KEY or "").strip():
 if not pathlib.Path("/content/drive/MyDrive").exists():
     drive.mount("/content/drive")
 
-DRIVE_ROOT = pathlib.Path("/content/drive/MyDrive/Nous").resolve()
+DRIVE_ROOT = pathlib.Path(
+    os.environ.get("NOUS_DRIVE_ROOT", "/content/drive/MyDrive")
+).resolve()
+# Nous-specific subdirs live under MyDrive/Nous/ but agent can access full Drive
+NOUS_HOME = DRIVE_ROOT / "Nous"
 REPO_DIR = pathlib.Path("/content/nous_repo").resolve()
 
 for sub in ["state", "logs", "memory", "index", "locks", "archive"]:
-    (DRIVE_ROOT / sub).mkdir(parents=True, exist_ok=True)
+    (NOUS_HOME / sub).mkdir(parents=True, exist_ok=True)
 REPO_DIR.mkdir(parents=True, exist_ok=True)
 
 # Clear stale owner mailbox files from previous session
 try:
     from nous.owner_inject import get_pending_path
-    # Clean legacy global file
-    _stale_inject = get_pending_path(DRIVE_ROOT)
+    _stale_inject = get_pending_path(NOUS_HOME)
     if _stale_inject.exists():
         _stale_inject.unlink(missing_ok=True)
-    # Clean per-task mailbox dir
-    _mailbox_dir = DRIVE_ROOT / "memory" / "owner_mailbox"
+    _mailbox_dir = NOUS_HOME / "memory" / "owner_mailbox"
     if _mailbox_dir.exists():
         for _f in _mailbox_dir.iterdir():
             _f.unlink(missing_ok=True)
 except Exception:
     pass
 
-CHAT_LOG_PATH = DRIVE_ROOT / "logs" / "chat.jsonl"
+CHAT_LOG_PATH = NOUS_HOME / "logs" / "chat.jsonl"
 if not CHAT_LOG_PATH.exists():
     CHAT_LOG_PATH.write_text("", encoding="utf-8")
 
