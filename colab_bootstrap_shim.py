@@ -58,13 +58,18 @@ BOOT_BRANCH = str(os.environ.get("NOUS_BOOT_BRANCH", "nous"))
 REPO_DIR = pathlib.Path("/content/nous_repo").resolve()
 REMOTE_URL = f"https://{GITHUB_TOKEN}:x-oauth-basic@github.com/{GITHUB_USER}/{GITHUB_REPO}.git"
 
+# Clone or update repo — handle "already exists" and broken states
 if not (REPO_DIR / ".git").exists():
     subprocess.run(["rm", "-rf", str(REPO_DIR)], check=False)
     subprocess.run(["git", "clone", REMOTE_URL, str(REPO_DIR)], check=True)
 else:
     subprocess.run(["git", "remote", "set-url", "origin", REMOTE_URL], cwd=str(REPO_DIR), check=True)
 
-subprocess.run(["git", "fetch", "origin"], cwd=str(REPO_DIR), check=True)
+_fetch_rc = subprocess.run(["git", "fetch", "origin"], cwd=str(REPO_DIR)).returncode
+if _fetch_rc != 0:
+    print(f"[boot] fetch failed (rc={_fetch_rc}) — re-cloning from scratch")
+    subprocess.run(["rm", "-rf", str(REPO_DIR)], check=False)
+    subprocess.run(["git", "clone", REMOTE_URL, str(REPO_DIR)], check=True)
 
 # Check if BOOT_BRANCH exists on the fork's remote.
 # New forks (from the main-only public repo) won't have it yet.
