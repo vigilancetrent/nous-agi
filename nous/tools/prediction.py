@@ -17,7 +17,7 @@ def _get_model(ctx: ToolContext):
     return PredictiveModel(drive_root=ctx.drive_root)
 
 
-async def _predict_failures(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _predict_failures(ctx: ToolContext, **args) -> str:
     model = _get_model(ctx)
     action = args.get("planned_action", "")
     failures = model.predict_failure_modes(action)
@@ -26,7 +26,7 @@ async def _predict_failures(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"action": action, "risks": failures, "count": len(failures)})
 
 
-async def _owner_patterns(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _owner_patterns(ctx: ToolContext, **args) -> str:
     model = _get_model(ctx)
     chat_log = ctx.drive_root / "logs" / "chat.jsonl" if ctx.drive_root else None
     patterns = model.analyze_owner_patterns(chat_log)
