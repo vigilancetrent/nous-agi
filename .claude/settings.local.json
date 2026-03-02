@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv ouroboros:*)",
+      "Bash(find .:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(do if:*)",
+      "Bash(do sed:*)",
+      "Bash(read f:*)",
+      "Bash(python:*)"
+    ]
+  }
+}

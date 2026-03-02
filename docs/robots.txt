@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://joi-lab.github.io/nous/sitemap.xml
