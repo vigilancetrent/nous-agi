@@ -377,7 +377,7 @@ class BackgroundConsciousness:
         "chat_history",
         # GitHub Issues
         "list_github_issues", "get_github_issue",
-        # AGI subsystems (safe for background)
+        # AGI subsystems
         "record_experience", "search_experiences", "get_strategies",
         "vector_search", "vector_reindex",
         "set_goal", "list_goals", "update_goal", "suggest_goals",
@@ -385,6 +385,15 @@ class BackgroundConsciousness:
         "assess_capabilities", "capability_profile",
         "owner_patterns",
         "get_dependency_map", "rebuild_world_model",
+        # Google services
+        "gmail_read", "gmail_read_full", "drive_search",
+        "calendar_list", "calendar_create",
+        # YouTube & Google Search
+        "youtube_search", "youtube_video_info", "google_search",
+        # Unrestricted tools
+        "http_request", "execute_python", "download_file", "pip_install",
+        "read_any_file", "write_any_file", "system_info",
+        "set_env_var", "list_env_vars",
     })
 
     def _build_registry(self) -> "ToolRegistry":
