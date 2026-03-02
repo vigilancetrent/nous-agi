@@ -17,7 +17,7 @@ def _get_tracker(ctx: ToolContext):
     return CapabilityTracker(drive_root=ctx.drive_root)
 
 
-async def _assess_capabilities(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _assess_capabilities(ctx: ToolContext, **args) -> str:
     tracker = _get_tracker(ctx)
     domain = args.get("domain", "general")
     score = tracker.assess_capability(domain)
@@ -30,7 +30,7 @@ async def _assess_capabilities(args: Dict[str, Any], ctx: ToolContext) -> str:
     })
 
 
-async def _capability_profile(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _capability_profile(ctx: ToolContext, **args) -> str:
     tracker = _get_tracker(ctx)
     profile = tracker.get_capability_profile()
     growth = tracker.identify_growth_areas()
