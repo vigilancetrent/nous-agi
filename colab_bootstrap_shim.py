@@ -106,4 +106,10 @@ if not pathlib.Path("/content/drive/MyDrive").exists():
 
 launcher_path = REPO_DIR / "colab_launcher.py"
 assert launcher_path.exists(), f"Missing launcher: {launcher_path}"
-subprocess.run([sys.executable, str(launcher_path)], cwd=str(REPO_DIR), check=True)
+
+# Run launcher inline (not subprocess) so output is visible in notebook
+os.chdir(str(REPO_DIR))
+if str(REPO_DIR) not in sys.path:
+    sys.path.insert(0, str(REPO_DIR))
+print("[boot] Starting colab_launcher.py...")
+exec(open(str(launcher_path), encoding="utf-8").read(), {"__name__": "__main__", "__file__": str(launcher_path)})
