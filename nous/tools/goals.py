@@ -17,7 +17,7 @@ def _get_tree(ctx: ToolContext):
     return GoalTree(drive_root=ctx.drive_root)
 
 
-async def _set_goal(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _set_goal(ctx: ToolContext, **args) -> str:
     from nous.goals import Goal
     tree = _get_tree(ctx)
     goal = Goal(
@@ -32,12 +32,12 @@ async def _set_goal(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"status": "created", "goal_id": goal_id, "title": goal.title})
 
 
-async def _list_goals(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _list_goals(ctx: ToolContext, **args) -> str:
     tree = _get_tree(ctx)
     return tree.get_goal_tree()
 
 
-async def _update_goal(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _update_goal(ctx: ToolContext, **args) -> str:
     tree = _get_tree(ctx)
     goal_id = args.get("goal_id", "")
     updates = {k: v for k, v in args.items() if k != "goal_id" and v is not None}
@@ -47,7 +47,7 @@ async def _update_goal(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"error": f"Goal {goal_id} not found"})
 
 
-async def _suggest_goals(args: Dict[str, Any], ctx: ToolContext) -> str:
+async def _suggest_goals(ctx: ToolContext, **args) -> str:
     tree = _get_tree(ctx)
     from nous.experience import ExperienceStore
     store = ExperienceStore(drive_root=ctx.drive_root)
