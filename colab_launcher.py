@@ -466,6 +466,109 @@ def _handle_supervisor_command(text: str, chat_id: int, tg_offset: int = 0):
             send_with_budget(chat_id, f"🧠 Background consciousness: {bg_status}")
         return f"[Supervisor handled /bg {action}]\n"
 
+    if lowered.startswith("/help"):
+        help_text = (
+            "🤖 *Nous Commands*\n\n"
+            "*/status* — System status, budget, queue\n"
+            "*/evolve on|off* — Toggle self-evolution mode\n"
+            "*/bg start|stop* — Background consciousness\n"
+            "*/review* — Queue code review task\n"
+            "*/model* _name_ — Switch LLM model\n"
+            "*/scan* _target_ — Quick vulnerability scan\n"
+            "*/search* _query_ — Search CVE databases\n"
+            "*/tools* — List all available tools\n"
+            "*/goals* — Show active goals\n"
+            "*/shell* _cmd_ — Run shell command\n"
+            "*/python* _code_ — Execute Python code\n"
+            "*/install* _pkg_ — pip install a package\n"
+            "*/restart* — Soft restart\n"
+            "*/panic* — Emergency stop everything\n"
+            "*/help* — This message"
+        )
+        send_with_budget(chat_id, help_text, fmt="markdown")
+        return True
+
+    if lowered.startswith("/model"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            current = os.environ.get("NOUS_MODEL", "qwen3-coder-next")
+            send_with_budget(chat_id, f"🔧 Current model: `{current}`\nUsage: /model <model_name>")
+            return True
+        new_model = parts[1].strip()
+        os.environ["NOUS_MODEL"] = new_model
+        send_with_budget(chat_id, f"🔧 Model switched to: `{new_model}`")
+        return True
+
+    if lowered.startswith("/tools"):
+        try:
+            from nous.tools.registry import ToolRegistry
+            import tempfile
+            tmp = pathlib.Path(tempfile.mkdtemp())
+            reg = ToolRegistry(repo_dir=tmp, drive_root=tmp)
+            schemas = reg.schemas()
+            names = sorted(t["function"]["name"] for t in schemas)
+            tool_list = f"🔧 *{len(names)} tools available:*\n\n"
+            # Group by category
+            categories = {}
+            for n in names:
+                prefix = n.split("_")[0] if "_" in n else n
+                categories.setdefault(prefix, []).append(n)
+            for cat in sorted(categories):
+                tool_list += ", ".join(f"`{t}`" for t in categories[cat]) + "\n"
+            # Telegram message limit is 4096 chars
+            if len(tool_list) > 4000:
+                tool_list = tool_list[:3990] + "\n..."
+            send_with_budget(chat_id, tool_list, fmt="markdown")
+        except Exception as e:
+            send_with_budget(chat_id, f"⚠️ Error listing tools: {e}")
+        return True
+
+    if lowered.startswith("/scan"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            send_with_budget(chat_id, "Usage: /scan <target_host_or_ip>\nRuns quick port scan + SSL check.")
+            return True
+        target = parts[1].strip()
+        send_with_budget(chat_id, f"🔍 Scanning {target}...")
+        # Pass to LLM as a task
+        return f"[Owner requested /scan] Run vuln_assess on target '{target}' with scan_type='quick'. Report all findings.\n"
+
+    if lowered.startswith("/search") and not lowered.startswith("/search_exp"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            send_with_budget(chat_id, "Usage: /search <CVE query>\nSearches NVD, CISA, ExploitDB, GitHub, OSV, CIRCL.")
+            return True
+        query = parts[1].strip()
+        send_with_budget(chat_id, f"🔍 Searching CVE databases for: {query}")
+        return f"[Owner requested /search] Use exploit_search to find CVEs for '{query}' with sources='all'. Summarize top findings with severity and remediation.\n"
+
+    if lowered.startswith("/goals"):
+        return "[Owner requested /goals] Use list_goals to show all active goals. Format nicely for Telegram.\n"
+
+    if lowered.startswith("/shell"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            send_with_budget(chat_id, "Usage: /shell <command>")
+            return True
+        cmd = parts[1].strip()
+        return f"[Owner requested /shell] Execute this shell command using run_shell and return the full output: {cmd}\n"
+
+    if lowered.startswith("/python"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            send_with_budget(chat_id, "Usage: /python <code>")
+            return True
+        code = parts[1].strip()
+        return f"[Owner requested /python] Execute this Python code using execute_python and return the output: {code}\n"
+
+    if lowered.startswith("/install"):
+        parts = text.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            send_with_budget(chat_id, "Usage: /install <package_name>")
+            return True
+        pkg = parts[1].strip()
+        return f"[Owner requested /install] Use pip_install to install this package: {pkg}. Report success/failure.\n"
+
     return ""
 
 
