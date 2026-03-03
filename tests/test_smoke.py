@@ -115,7 +115,7 @@ EXPECTED_TOOLS = [
     # Penetration testing
     "port_scan", "nmap_scan", "dir_brute", "subdomain_enum",
     "crack_hash", "ssl_scan", "exploit_search", "reverse_shell",
-    "http_fuzz", "generate_wordlist",
+    "http_fuzz", "generate_wordlist", "cve_lookup", "vuln_assess",
 ]
 
 
