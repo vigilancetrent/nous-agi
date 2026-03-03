@@ -25,6 +25,8 @@ from nous.utils import utc_now_iso, append_jsonl, truncate_for_log, sanitize_too
 
 log = logging.getLogger(__name__)
 
+from nous.tool_call_parser import parse_tool_calls_from_text as _parse_tool_calls_from_text
+from nous.tool_call_parser import strip_tool_call_tags as _strip_tool_call_tags
 
 def _is_local_llm() -> bool:
     """Check if we're using a local LLM (not OpenRouter) based on LLM_BASE_URL."""
@@ -132,7 +134,6 @@ READ_ONLY_PARALLEL_TOOLS = frozenset({
 # Stateful browser tools require thread-affinity (Playwright sync uses greenlet)
 STATEFUL_BROWSER_TOOLS = frozenset({"browse_page", "browser_action"})
 
-
 def _truncate_tool_result(result: Any) -> str:
     """
     Hard-cap tool result string to 50000 characters.
@@ -143,7 +144,6 @@ def _truncate_tool_result(result: Any) -> str:
         return result_str
     original_len = len(result_str)
     return result_str[:50000] + f"\n... (truncated from {original_len} chars)"
-
 
 def _execute_single_tool(
     tools: ToolRegistry,
@@ -206,7 +206,6 @@ def _execute_single_tool(
         "is_code_tool": is_code_tool,
     }
 
-
 class _StatefulToolExecutor:
     """
     Thread-sticky executor for stateful tools (browser, etc).
@@ -237,7 +236,6 @@ class _StatefulToolExecutor:
         if self._executor is not None:
             self._executor.shutdown(wait=wait, cancel_futures=cancel_futures)
             self._executor = None
-
 
 def _make_timeout_result(
     fn_name: str,
@@ -289,7 +287,6 @@ def _make_timeout_result(
         "is_code_tool": is_code_tool,
     }
 
-
 def _execute_with_timeout(
     tools: ToolRegistry,
     tc: Dict[str, Any],
@@ -337,7 +334,6 @@ def _execute_with_timeout(
                 )
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
-
 
 def _handle_tool_calls(
     tool_calls: List[Dict[str, Any]],
@@ -392,7 +388,6 @@ def _handle_tool_calls(
     # Process results in original order
     return _process_tool_results(results, messages, llm_trace, emit_progress)
 
-
 def _handle_text_response(
     content: Optional[str],
     llm_trace: Dict[str, Any],
@@ -406,7 +401,6 @@ def _handle_text_response(
     if content and content.strip():
         llm_trace["assistant_notes"].append(content.strip()[:320])
     return (content or ""), accumulated_usage, llm_trace
-
 
 def _check_budget_limits(
     budget_remaining_usd: Optional[float],
@@ -457,7 +451,6 @@ def _check_budget_limits(
 
     return None
 
-
 def _maybe_inject_self_check(
     round_idx: int,
     max_rounds: int,
@@ -498,7 +491,6 @@ def _maybe_inject_self_check(
     )
     messages.append({"role": "system", "content": reminder})
     emit_progress(f"🔄 Checkpoint {checkpoint_num} at round {round_idx}: ~{ctx_tokens} tokens, ${task_cost:.2f} spent")
-
 
 def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
     """
@@ -559,7 +551,6 @@ def _setup_dynamic_tools(tools_registry, tool_schemas, messages):
 
     return tool_schemas, enabled_extra
 
-
 def _drain_incoming_messages(
     messages: List[Dict[str, Any]],
     incoming_messages: queue.Queue,
@@ -599,7 +590,6 @@ def _drain_incoming_messages(
                     })
                 except Exception:
                     pass
-
 
 def run_llm_loop(
     messages: List[Dict[str, Any]],
@@ -750,6 +740,16 @@ def run_llm_loop(
 
             tool_calls = msg.get("tool_calls") or []
             content = msg.get("content")
+
+            # Local models (Qwen, Llama, etc.) may emit tool calls as raw
+            # <tool_call> tags in content instead of structured tool_calls.
+            # Parse them so the loop can execute tools normally.
+            if not tool_calls and content and "<tool_call>" in content:
+                tool_calls = _parse_tool_calls_from_text(content)
+                if tool_calls:
+                    log.info("Parsed %d tool call(s) from raw text output", len(tool_calls))
+                    content = _strip_tool_call_tags(content) or None
+
             # No tool calls — final response
             if not tool_calls:
                 return _handle_text_response(content, llm_trace, accumulated_usage)
@@ -791,7 +791,6 @@ def run_llm_loop(
             except Exception:
                 log.debug("Failed to cleanup task mailbox", exc_info=True)
 
-
 def _emit_llm_usage_event(
     event_queue: Optional[queue.Queue],
     task_id: str,
@@ -830,7 +829,6 @@ def _emit_llm_usage_event(
         })
     except Exception:
         log.debug("Failed to put llm_usage event to queue", exc_info=True)
-
 
 def _call_llm_with_retry(
     llm: LLMClient,
@@ -883,6 +881,12 @@ def _call_llm_with_retry(
             # Empty response = retry-worthy (model sometimes returns empty content with no tool_calls)
             tool_calls = msg.get("tool_calls") or []
             content = msg.get("content")
+            # Parse raw <tool_call> tags from local models before checking emptiness
+            if not tool_calls and content and "<tool_call>" in content:
+                tool_calls = _parse_tool_calls_from_text(content)
+                if tool_calls:
+                    msg["tool_calls"] = tool_calls
+                    msg["content"] = _strip_tool_call_tags(content) or ""
             if not tool_calls and (not content or not content.strip()):
                 log.warning("LLM returned empty response (no content, no tool_calls), attempt %d/%d", attempt + 1, max_retries)
 
@@ -934,7 +938,6 @@ def _call_llm_with_retry(
 
     return None, 0.0
 
-
 def _process_tool_results(
     results: List[Dict[str, Any]],
     messages: List[Dict[str, Any]],
@@ -981,7 +984,6 @@ def _process_tool_results(
         })
 
     return error_count
-
 
 def _safe_args(v: Any) -> Any:
     """Ensure args are JSON-serializable for trace logging."""

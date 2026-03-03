@@ -239,6 +239,15 @@ class BackgroundConsciousness:
                 content = msg.get("content") or ""
                 tool_calls = msg.get("tool_calls") or []
 
+                # Parse raw <tool_call> tags from local models
+                if not tool_calls and content and "<tool_call>" in content:
+                    from nous.tool_call_parser import parse_tool_calls_from_text, strip_tool_call_tags
+                    tool_calls = parse_tool_calls_from_text(content)
+                    if tool_calls:
+                        content = strip_tool_call_tags(content) or ""
+                        msg["tool_calls"] = tool_calls
+                        msg["content"] = content
+
                 if self._paused:
                     break
 
