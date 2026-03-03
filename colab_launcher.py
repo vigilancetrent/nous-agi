@@ -141,7 +141,8 @@ DIAG_SLOW_CYCLE_SEC = _parse_int_cfg(
 # Export LLM endpoint config for child processes
 os.environ["LLM_BASE_URL"] = str(LLM_BASE_URL or "https://montana-wagon-codes-quit.trycloudflare.com/v1")
 os.environ["LLM_API_KEY"] = str(LLM_API_KEY or "dummy")
-os.environ["OPENROUTER_API_KEY"] = str(OPENROUTER_API_KEY or "")
+if OPENROUTER_API_KEY:
+    os.environ["OPENROUTER_API_KEY"] = OPENROUTER_API_KEY
 os.environ["OPENAI_API_KEY"] = str(OPENAI_API_KEY or "")
 os.environ["ANTHROPIC_API_KEY"] = str(ANTHROPIC_API_KEY or "")
 os.environ["GITHUB_USER"] = str(GITHUB_USER)
