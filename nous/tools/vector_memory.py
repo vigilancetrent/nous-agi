@@ -17,7 +17,7 @@ def _get_vmem(ctx: ToolContext):
     return VectorMemory(drive_root=ctx.drive_root)
 
 
-async def _vector_search(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _vector_search(ctx: ToolContext, **args) -> str:
     vmem = _get_vmem(ctx)
     query = args.get("query", "")
     sources = args.get("sources", None)
@@ -34,7 +34,7 @@ async def _vector_search(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"results": formatted, "count": len(formatted)})
 
 
-async def _vector_reindex(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _vector_reindex(ctx: ToolContext, **args) -> str:
     vmem = _get_vmem(ctx)
     knowledge_dir = ctx.drive_root / "memory" / "knowledge" if ctx.drive_root else None
     counts = vmem.reindex_all(knowledge_dir=knowledge_dir)

@@ -18,7 +18,7 @@ def _get_store(ctx: ToolContext):
     return ExperienceStore(drive_root=ctx.drive_root)
 
 
-async def _record_experience(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _record_experience(ctx: ToolContext, **args) -> str:
     from nous.experience import Experience
     store = _get_store(ctx)
     exp = Experience(
@@ -38,7 +38,7 @@ async def _record_experience(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"status": "recorded", "experience_id": exp_id})
 
 
-async def _search_experiences(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _search_experiences(ctx: ToolContext, **args) -> str:
     store = _get_store(ctx)
     query = args.get("query", "")
     top_k = args.get("top_k", 5)
@@ -56,7 +56,7 @@ async def _search_experiences(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"results": results, "count": len(results)})
 
 
-async def _get_strategies(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _get_strategies(ctx: ToolContext, **args) -> str:
     store = _get_store(ctx)
     task = args.get("task_description", "")
     strategies = store.get_relevant_strategies(task)

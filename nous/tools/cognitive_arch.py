@@ -17,14 +17,14 @@ def _get_arch(ctx: ToolContext):
     return CognitiveArchitecture(repo_dir=ctx.repo_dir, drive_root=ctx.drive_root)
 
 
-async def _analyze_prompt(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _analyze_prompt(ctx: ToolContext, **args) -> str:
     arch = _get_arch(ctx)
     path = args.get("prompt_path", "")
     result = arch.analyze_prompt_effectiveness(path)
     return json.dumps(result, indent=2)
 
 
-async def _modify_prompt(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _modify_prompt(ctx: ToolContext, **args) -> str:
     arch = _get_arch(ctx)
     action = args.get("action", "propose")
 
@@ -46,7 +46,7 @@ async def _modify_prompt(args: Dict[str, Any], ctx: ToolContext) -> str:
         return json.dumps({"error": f"Unknown action: {action}"})
 
 
-async def _modify_context_config(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _modify_context_config(ctx: ToolContext, **args) -> str:
     arch = _get_arch(ctx)
     changes = args.get("changes", {})
     if not changes:

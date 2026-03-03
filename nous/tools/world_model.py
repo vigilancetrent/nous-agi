@@ -17,14 +17,14 @@ def _get_model(ctx: ToolContext):
     return WorldModel(repo_dir=ctx.repo_dir, drive_root=ctx.drive_root)
 
 
-async def _analyze_impact(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _analyze_impact(ctx: ToolContext, **args) -> str:
     model = _get_model(ctx)
     changed = args.get("changed_files", [])
     affected = model.predict_impact(changed)
     return json.dumps({"changed": changed, "affected": affected, "total_affected": len(affected)})
 
 
-async def _get_dependency_map(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _get_dependency_map(ctx: ToolContext, **args) -> str:
     model = _get_model(ctx)
     module = args.get("module", "")
     if module:
@@ -32,7 +32,7 @@ async def _get_dependency_map(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps(model.get_summary(), indent=2, default=str)
 
 
-async def _rebuild_world_model(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _rebuild_world_model(ctx: ToolContext, **args) -> str:
     model = _get_model(ctx)
     result = model.build_dependency_graph()
     return json.dumps({"status": "rebuilt", **result})

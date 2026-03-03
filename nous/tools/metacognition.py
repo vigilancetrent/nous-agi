@@ -17,7 +17,7 @@ def _get_loop(ctx: ToolContext):
     return MetaCognitiveLoop(drive_root=ctx.drive_root)
 
 
-async def _self_evaluate(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _self_evaluate(ctx: ToolContext, **args) -> str:
     loop = _get_loop(ctx)
     evaluation = loop.evaluate_task(
         task_id=args.get("task_id", "manual"),
@@ -37,7 +37,7 @@ async def _self_evaluate(args: Dict[str, Any], ctx: ToolContext) -> str:
     })
 
 
-async def _get_reasoning_insights(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _get_reasoning_insights(ctx: ToolContext, **args) -> str:
     loop = _get_loop(ctx)
     recommendations = loop.get_strategy_recommendations(args.get("task_type", ""))
     patterns = loop.detect_reasoning_patterns()

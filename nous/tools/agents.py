@@ -17,7 +17,7 @@ def _get_orchestrator():
     return MultiAgentOrchestrator()
 
 
-async def _deliberate(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _deliberate(ctx: ToolContext, **args) -> str:
     orch = _get_orchestrator()
     question = args.get("question", "")
     perspectives = args.get("perspectives", None)
@@ -25,7 +25,7 @@ async def _deliberate(args: Dict[str, Any], ctx: ToolContext) -> str:
     return result
 
 
-async def _plan_and_critique(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _plan_and_critique(ctx: ToolContext, **args) -> str:
     orch = _get_orchestrator()
     description = args.get("description", "")
     context = args.get("context", "")

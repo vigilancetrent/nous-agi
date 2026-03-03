@@ -31,7 +31,7 @@ def _get_sandbox():
     return _sandbox
 
 
-async def _persistent_browse(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _persistent_browse(ctx: ToolContext, **args) -> str:
     browser = _get_browser(ctx)
     action = args.get("action", "list")
 
@@ -53,7 +53,7 @@ async def _persistent_browse(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps({"error": f"Unknown action: {action}"})
 
 
-async def _sandbox_execute(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _sandbox_execute(ctx: ToolContext, **args) -> str:
     sandbox = _get_sandbox()
     action = args.get("action", "execute")
 

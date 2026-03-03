@@ -18,7 +18,7 @@ def _get_reasoner():
     return FormalReasoner()
 
 
-async def _formal_argument(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _formal_argument(ctx: ToolContext, **args) -> str:
     reasoner = _get_reasoner()
     claim = args.get("claim", "")
     evidence = args.get("evidence", [])
@@ -26,7 +26,7 @@ async def _formal_argument(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps(asdict(argument), indent=2)
 
 
-async def _evaluate_argument(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _evaluate_argument(ctx: ToolContext, **args) -> str:
     reasoner = _get_reasoner()
     from nous.reasoning import Argument
     arg = Argument(
@@ -39,7 +39,7 @@ async def _evaluate_argument(args: Dict[str, Any], ctx: ToolContext) -> str:
     return json.dumps(result, indent=2)
 
 
-async def _decision_matrix(args: Dict[str, Any], ctx: ToolContext) -> str:
+def _decision_matrix(ctx: ToolContext, **args) -> str:
     reasoner = _get_reasoner()
     options = args.get("options", [])
     criteria = args.get("criteria", [])
