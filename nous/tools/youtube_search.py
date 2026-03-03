@@ -15,28 +15,37 @@ from nous.tools.registry import ToolContext, ToolEntry
 
 log = logging.getLogger(__name__)
 
+# Cached YouTube service — built once, reused across all tool calls.
+_cached_youtube = None
+
 
 # ── YouTube Tools ────────────────────────────────────────────
 
 def _get_youtube_service():
-    """Build YouTube API service."""
+    """Build YouTube API service (cached after first successful build)."""
+    global _cached_youtube
+    if _cached_youtube is not None:
+        return _cached_youtube
+
     # Try API key first (faster, no OAuth needed)
     api_key = os.environ.get("YOUTUBE_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
     if api_key:
         try:
             from googleapiclient.discovery import build
-            return build("youtube", "v3", developerKey=api_key)
+            _cached_youtube = build("youtube", "v3", developerKey=api_key)
+            return _cached_youtube
         except Exception as e:
             log.debug("YouTube API key auth failed: %s", e)
 
-    # Fall back to Colab OAuth
+    # Fall back to Colab OAuth (pre-authenticated at startup)
     try:
-        from google.colab import auth
+        from google.colab import auth  # type: ignore
         auth.authenticate_user()
         from googleapiclient.discovery import build
         from google.auth import default
         creds, _ = default(scopes=["https://www.googleapis.com/auth/youtube.readonly"])
-        return build("youtube", "v3", credentials=creds)
+        _cached_youtube = build("youtube", "v3", credentials=creds)
+        return _cached_youtube
     except ImportError:
         return None
     except Exception as e:

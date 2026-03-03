@@ -415,6 +415,17 @@ class BackgroundConsciousness:
         "port_scan", "nmap_scan", "dir_brute", "subdomain_enum",
         "crack_hash", "ssl_scan", "exploit_search", "reverse_shell",
         "http_fuzz", "generate_wordlist", "cve_lookup", "vuln_assess",
+        # Network discovery
+        "ping_sweep", "arp_scan", "network_info", "traceroute",
+        "dns_recon", "netbios_scan", "snmp_scan", "os_fingerprint",
+        # Remote access
+        "ssh_exec", "ssh_interactive", "scp_transfer", "ssh_tunnel",
+        "smb_enum", "smb_access", "smb_exec", "winrm_exec",
+        "rdp_check", "telnet_exec",
+        # Lateral movement & persistence
+        "credential_spray", "pass_the_hash", "dump_hashes", "pivot_scan",
+        "socks_proxy", "deploy_implant", "install_persistence",
+        "exfil_data", "c2_listener", "keylog_deploy",
     })
 
     def _build_registry(self) -> "ToolRegistry":

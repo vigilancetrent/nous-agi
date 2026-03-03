@@ -215,6 +215,10 @@ Full list is in tool schemas on every call. Key tools:
 `update_identity`, `toggle_evolution`, `toggle_consciousness`,
 `forward_to_worker` (forward message to a specific worker task)
 
+**Network Discovery:** `ping_sweep`, `arp_scan`, `network_info`, `traceroute`, `dns_recon`, `netbios_scan`, `snmp_scan`, `os_fingerprint`
+**Remote Access:** `ssh_exec`, `ssh_interactive`, `scp_transfer`, `ssh_tunnel`, `smb_enum`, `smb_access`, `smb_exec`, `winrm_exec`, `rdp_check`, `telnet_exec`
+**Lateral Movement:** `credential_spray`, `pass_the_hash`, `dump_hashes`, `pivot_scan`, `socks_proxy`, `deploy_implant`, `install_persistence`, `exfil_data`, `c2_listener`, `keylog_deploy`
+
 New tools: module in `nous/tools/`, export `get_tools()`.
 The registry discovers them automatically.
 

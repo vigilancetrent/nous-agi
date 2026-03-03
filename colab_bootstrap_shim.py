@@ -104,6 +104,20 @@ print("[boot] logs: /content/drive/MyDrive/Nous/logs/supervisor.jsonl")
 if not pathlib.Path("/content/drive/MyDrive").exists():
     drive.mount("/content/drive")
 
+# Pre-authenticate Google APIs so Nous can use them autonomously.
+# This triggers the interactive OAuth consent once at boot; subsequent
+# calls (Gmail, Drive API, Calendar, YouTube) reuse cached credentials.
+try:
+    from google.colab import auth  # type: ignore
+    auth.authenticate_user()
+    print("[boot] Google API auth: OK (Gmail, Drive, Calendar, YouTube ready)")
+except Exception as _auth_err:
+    print(f"[boot] Google API auth skipped: {_auth_err}")
+
+# Export optional Google API keys from Colab Secrets
+for _name in ("GOOGLE_API_KEY", "YOUTUBE_API_KEY", "GOOGLE_SEARCH_CX"):
+    export_secret_to_env(_name, required=False)
+
 launcher_path = REPO_DIR / "colab_launcher.py"
 assert launcher_path.exists(), f"Missing launcher: {launcher_path}"
 

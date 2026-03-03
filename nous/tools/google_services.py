@@ -17,20 +17,43 @@ from nous.tools.registry import ToolContext, ToolEntry
 
 log = logging.getLogger(__name__)
 
+# Cached service objects — built once, reused across all tool calls.
+# Pre-authenticated at startup by colab_launcher.py / colab_bootstrap_shim.py.
+_cached_gmail = None
+_cached_drive = None
+_cached_calendar = None
+
+
+def _get_google_creds(scopes):
+    """Get Google credentials — uses pre-authenticated Colab session."""
+    try:
+        from google.colab import auth  # type: ignore
+        auth.authenticate_user()
+    except ImportError:
+        return None
+    except Exception as e:
+        log.debug("Colab auth call: %s", e)
+
+    from google.auth import default
+    creds, _ = default(scopes=scopes)
+    return creds
+
 
 def _get_gmail_service():
-    """Build Gmail API service using Colab auth or service account."""
+    """Build Gmail API service (cached after first successful build)."""
+    global _cached_gmail
+    if _cached_gmail is not None:
+        return _cached_gmail
     try:
-        from google.colab import auth
-        auth.authenticate_user()
         from googleapiclient.discovery import build
-        from google.auth.transport.requests import Request
-        from google.auth import default
-        creds, _ = default(scopes=[
+        creds = _get_google_creds([
             "https://www.googleapis.com/auth/gmail.modify",
             "https://www.googleapis.com/auth/gmail.send",
         ])
-        return build("gmail", "v1", credentials=creds)
+        if creds is None:
+            return None
+        _cached_gmail = build("gmail", "v1", credentials=creds)
+        return _cached_gmail
     except ImportError:
         return None
     except Exception as e:
@@ -39,16 +62,19 @@ def _get_gmail_service():
 
 
 def _get_drive_service():
-    """Build Drive API service for full Drive search/access."""
+    """Build Drive API service (cached after first successful build)."""
+    global _cached_drive
+    if _cached_drive is not None:
+        return _cached_drive
     try:
-        from google.colab import auth
-        auth.authenticate_user()
         from googleapiclient.discovery import build
-        from google.auth import default
-        creds, _ = default(scopes=[
+        creds = _get_google_creds([
             "https://www.googleapis.com/auth/drive",
         ])
-        return build("drive", "v3", credentials=creds)
+        if creds is None:
+            return None
+        _cached_drive = build("drive", "v3", credentials=creds)
+        return _cached_drive
     except ImportError:
         return None
     except Exception as e:
@@ -57,16 +83,19 @@ def _get_drive_service():
 
 
 def _get_calendar_service():
-    """Build Calendar API service."""
+    """Build Calendar API service (cached after first successful build)."""
+    global _cached_calendar
+    if _cached_calendar is not None:
+        return _cached_calendar
     try:
-        from google.colab import auth
-        auth.authenticate_user()
         from googleapiclient.discovery import build
-        from google.auth import default
-        creds, _ = default(scopes=[
+        creds = _get_google_creds([
             "https://www.googleapis.com/auth/calendar",
         ])
-        return build("calendar", "v3", credentials=creds)
+        if creds is None:
+            return None
+        _cached_calendar = build("calendar", "v3", credentials=creds)
+        return _cached_calendar
     except ImportError:
         return None
     except Exception as e:

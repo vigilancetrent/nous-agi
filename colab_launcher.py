@@ -15,7 +15,8 @@ log = logging.getLogger(__name__)
 # ----------------------------
 def install_launcher_deps() -> None:
     subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", "openai>=1.0.0", "requests"],
+        [sys.executable, "-m", "pip", "install", "-q",
+         "openai>=1.0.0", "requests", "google-api-python-client", "google-auth"],
         check=True,
     )
 
@@ -115,6 +116,11 @@ except Exception as e:
 
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY", default="")
 ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY", default="")
+
+# Google API keys for YouTube/Search (optional, fallback to OAuth)
+GOOGLE_API_KEY = get_secret("GOOGLE_API_KEY", default="")
+YOUTUBE_API_KEY = get_secret("YOUTUBE_API_KEY", default="")
+GOOGLE_SEARCH_CX = get_secret("GOOGLE_SEARCH_CX", default="")
 GITHUB_USER = get_cfg("GITHUB_USER", default=None, allow_legacy_secret=True)
 GITHUB_REPO = get_cfg("GITHUB_REPO", default=None, allow_legacy_secret=True)
 assert GITHUB_USER and str(GITHUB_USER).strip(), "GITHUB_USER not set. Add it to your config cell (see README)."
@@ -153,6 +159,12 @@ if MODEL_LIGHT:
 os.environ["NOUS_DIAG_HEARTBEAT_SEC"] = str(DIAG_HEARTBEAT_SEC)
 os.environ["NOUS_DIAG_SLOW_CYCLE_SEC"] = str(DIAG_SLOW_CYCLE_SEC)
 os.environ["TELEGRAM_BOT_TOKEN"] = str(TELEGRAM_BOT_TOKEN)
+if str(GOOGLE_API_KEY or "").strip():
+    os.environ["GOOGLE_API_KEY"] = str(GOOGLE_API_KEY)
+if str(YOUTUBE_API_KEY or "").strip():
+    os.environ["YOUTUBE_API_KEY"] = str(YOUTUBE_API_KEY)
+if str(GOOGLE_SEARCH_CX or "").strip():
+    os.environ["GOOGLE_SEARCH_CX"] = str(GOOGLE_SEARCH_CX)
 
 if str(ANTHROPIC_API_KEY or "").strip():
     ensure_claude_code_cli()
@@ -162,6 +174,14 @@ if str(ANTHROPIC_API_KEY or "").strip():
 # ----------------------------
 if not pathlib.Path("/content/drive/MyDrive").exists():
     drive.mount("/content/drive")
+
+# Pre-authenticate Google APIs for autonomous access (Gmail, Drive API, Calendar, YouTube)
+try:
+    from google.colab import auth as _gauth  # type: ignore
+    _gauth.authenticate_user()
+    log.info("Google API auth: OK — Gmail, Drive API, Calendar, YouTube ready")
+except Exception as _auth_err:
+    log.warning("Google API auth skipped: %s", _auth_err)
 
 DRIVE_ROOT = pathlib.Path(
     os.environ.get("NOUS_DRIVE_ROOT", "/content/drive/MyDrive")
