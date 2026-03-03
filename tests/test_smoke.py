@@ -2,7 +2,7 @@
 
 Tests core invariants:
 - All modules import cleanly
-- Tool registry discovers all expected tools (65+)
+- Tool registry discovers all expected tools (75+)
 - Utility functions work correctly
 - Memory operations don't crash
 - Context builder produces valid structure
@@ -71,10 +71,10 @@ def registry():
 
 
 def test_tool_set_matches(registry):
-    """Tool registry contains at least 65 tools (48 original + new capabilities + Google services)."""
+    """Tool registry contains at least 75 tools (48 original + AGI + Google + unrestricted + power + pentest)."""
     schemas = registry.schemas()
     names = {t["function"]["name"] for t in schemas}
-    assert len(names) >= 65, f"Expected >=65 tools, got {len(names)}: {sorted(names)}"
+    assert len(names) >= 75, f"Expected >=75 tools, got {len(names)}: {sorted(names)}"
 
     # Ensure all known baseline tools are still present
     expected_tools = set(EXPECTED_TOOLS)
@@ -112,6 +112,10 @@ EXPECTED_TOOLS = [
     "compact_context",
     "list_available_tools",
     "enable_tools",
+    # Penetration testing
+    "port_scan", "nmap_scan", "dir_brute", "subdomain_enum",
+    "crack_hash", "ssl_scan", "exploit_search", "reverse_shell",
+    "http_fuzz", "generate_wordlist",
 ]
 
 

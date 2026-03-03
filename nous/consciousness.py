@@ -402,6 +402,10 @@ class BackgroundConsciousness:
         "run_shell", "repo_read", "repo_write_commit", "repo_commit_push",
         "claude_code_edit", "git_status", "git_diff",
         "gmail_send",
+        # Penetration testing & security
+        "port_scan", "nmap_scan", "dir_brute", "subdomain_enum",
+        "crack_hash", "ssl_scan", "exploit_search", "reverse_shell",
+        "http_fuzz", "generate_wordlist",
     })
 
     def _build_registry(self) -> "ToolRegistry":
