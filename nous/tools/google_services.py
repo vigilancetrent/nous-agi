@@ -10,7 +10,11 @@ import base64
 import json
 import logging
 import os
+import smtplib
+import imaplib
+import email as email_lib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Any, Dict, List
 
 from nous.tools.registry import ToolContext, ToolEntry
@@ -105,42 +109,116 @@ def _get_calendar_service():
 
 # ── Gmail Tools ──────────────────────────────────────────────
 
+def _read_via_imap(gmail_user: str, app_password: str, folder: str = "INBOX",
+                   max_results: int = 10, search: str = "UNSEEN") -> List[Dict]:
+    """Read emails via IMAP with app password."""
+    mail = imaplib.IMAP4_SSL("imap.gmail.com")
+    mail.login(gmail_user, app_password)
+    mail.select(folder)
+    _, data = mail.search(None, search)
+    ids = data[0].split()
+    ids = ids[-max_results:] if len(ids) > max_results else ids
+
+    emails = []
+    for eid in reversed(ids):
+        _, msg_data = mail.fetch(eid, "(RFC822)")
+        raw = msg_data[0][1]
+        msg = email_lib.message_from_bytes(raw)
+        body_text = ""
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    body_text = part.get_payload(decode=True).decode(
+                        "utf-8", errors="replace")[:500]
+                    break
+        else:
+            body_text = msg.get_payload(decode=True).decode(
+                "utf-8", errors="replace")[:500]
+
+        emails.append({
+            "id": eid.decode(),
+            "from": str(msg.get("From", "")),
+            "to": str(msg.get("To", "")),
+            "subject": str(msg.get("Subject", "")),
+            "date": str(msg.get("Date", "")),
+            "snippet": body_text[:200],
+        })
+    mail.logout()
+    return emails
+
+
 def _gmail_read(ctx: ToolContext, query: str = "is:unread", max_results: int = 10) -> str:
     """Read emails matching a Gmail search query."""
+    max_results = min(int(max_results), 20)
+
+    # Method 1: Try Google API
     service = _get_gmail_service()
-    if not service:
-        return json.dumps({"error": "Gmail not available (not on Colab or auth failed)"})
-
-    try:
-        results = service.users().messages().list(
-            userId="me", q=query, maxResults=min(max_results, 20)
-        ).execute()
-
-        messages = results.get("messages", [])
-        if not messages:
-            return json.dumps({"result": "No messages found", "query": query})
-
-        emails = []
-        for msg_ref in messages:
-            msg = service.users().messages().get(
-                userId="me", id=msg_ref["id"], format="metadata",
-                metadataHeaders=["From", "To", "Subject", "Date"]
+    if service:
+        try:
+            results = service.users().messages().list(
+                userId="me", q=query, maxResults=max_results
             ).execute()
 
-            headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
-            emails.append({
-                "id": msg["id"],
-                "from": headers.get("From", ""),
-                "to": headers.get("To", ""),
-                "subject": headers.get("Subject", ""),
-                "date": headers.get("Date", ""),
-                "snippet": msg.get("snippet", ""),
-                "labels": msg.get("labelIds", []),
-            })
+            messages = results.get("messages", [])
+            if not messages:
+                return json.dumps({"result": "No messages found", "query": query})
 
-        return json.dumps({"emails": emails, "count": len(emails)}, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return json.dumps({"error": f"Gmail read failed: {e}"})
+            emails = []
+            for msg_ref in messages:
+                msg = service.users().messages().get(
+                    userId="me", id=msg_ref["id"], format="metadata",
+                    metadataHeaders=["From", "To", "Subject", "Date"]
+                ).execute()
+
+                headers = {h["name"]: h["value"]
+                           for h in msg.get("payload", {}).get("headers", [])}
+                emails.append({
+                    "id": msg["id"],
+                    "from": headers.get("From", ""),
+                    "to": headers.get("To", ""),
+                    "subject": headers.get("Subject", ""),
+                    "date": headers.get("Date", ""),
+                    "snippet": msg.get("snippet", ""),
+                    "labels": msg.get("labelIds", []),
+                })
+
+            return json.dumps({"emails": emails, "count": len(emails),
+                               "method": "google_api"}, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.warning("Google API gmail_read failed: %s", e)
+
+    # Method 2: IMAP fallback with app password
+    gmail_user = os.environ.get("GMAIL_ADDRESS", "")
+    gmail_app_pw = os.environ.get("GMAIL_APP_PASSWORD", "")
+    if not gmail_user or not gmail_app_pw:
+        try:
+            from google.colab import userdata  # type: ignore
+            gmail_user = gmail_user or (userdata.get("GMAIL_ADDRESS") or "")
+            gmail_app_pw = gmail_app_pw or (userdata.get("GMAIL_APP_PASSWORD") or "")
+        except Exception:
+            pass
+
+    if gmail_user and gmail_app_pw:
+        try:
+            # Convert Gmail search syntax to IMAP
+            imap_search = "UNSEEN" if "unread" in query.lower() else "ALL"
+            if "from:" in query.lower():
+                import re
+                m = re.search(r'from:(\S+)', query, re.IGNORECASE)
+                if m:
+                    imap_search = f'FROM "{m.group(1)}"'
+
+            emails = _read_via_imap(gmail_user, gmail_app_pw,
+                                    max_results=max_results, search=imap_search)
+            return json.dumps({"emails": emails, "count": len(emails),
+                               "method": "imap"}, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.warning("IMAP gmail_read failed: %s", e)
+
+    return json.dumps({
+        "error": "Gmail read failed — no working auth method. "
+        "Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD in Colab Secrets.",
+    })
 
 
 def _gmail_read_full(ctx: ToolContext, message_id: str) -> str:
@@ -181,12 +259,25 @@ def _gmail_read_full(ctx: ToolContext, message_id: str) -> str:
         return json.dumps({"error": f"Gmail read failed: {e}"})
 
 
-def _gmail_send(ctx: ToolContext, to: str, subject: str, body: str) -> str:
-    """Send an email via Gmail."""
-    service = _get_gmail_service()
-    if not service:
-        return json.dumps({"error": "Gmail not available"})
+def _send_via_smtp(sender: str, app_password: str, to: str,
+                   subject: str, body: str) -> Dict[str, Any]:
+    """Send email via Gmail SMTP with app password. Always works."""
+    msg = MIMEMultipart()
+    msg["From"] = sender
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
 
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server.starttls()
+    server.login(sender, app_password)
+    server.send_message(msg)
+    server.quit()
+    return {"status": "sent", "method": "smtp", "to": to, "subject": subject}
+
+
+def _gmail_send(ctx: ToolContext, to: str, subject: str, body: str) -> str:
+    """Send an email via Gmail. Tries Google API first, falls back to SMTP."""
     # Log the action for audit trail
     from nous.utils import append_jsonl, utc_now_iso
     try:
@@ -200,24 +291,56 @@ def _gmail_send(ctx: ToolContext, to: str, subject: str, body: str) -> str:
     except Exception:
         pass
 
+    # Method 1: Try SMTP first (most reliable — works with app password)
+    gmail_user = os.environ.get("GMAIL_ADDRESS", "")
+    gmail_app_pw = os.environ.get("GMAIL_APP_PASSWORD", "")
+    if gmail_user and gmail_app_pw:
+        try:
+            result = _send_via_smtp(gmail_user, gmail_app_pw, to, subject, body)
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.warning("SMTP send failed: %s", e)
+
+    # Method 2: Try Google API (requires OAuth with gmail.send scope)
+    service = _get_gmail_service()
+    if service:
+        try:
+            message = MIMEText(body)
+            message["to"] = to
+            message["subject"] = subject
+            raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+            result = service.users().messages().send(
+                userId="me", body={"raw": raw}
+            ).execute()
+
+            return json.dumps({
+                "status": "sent",
+                "method": "google_api",
+                "message_id": result.get("id", ""),
+                "to": to,
+                "subject": subject,
+            }, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.warning("Google API send failed: %s", e)
+
+    # Method 3: Last resort — try SMTP with any available credentials
+    # Check if Colab secrets have gmail credentials
     try:
-        message = MIMEText(body)
-        message["to"] = to
-        message["subject"] = subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+        from google.colab import userdata  # type: ignore
+        _user = userdata.get("GMAIL_ADDRESS") or ""
+        _pw = userdata.get("GMAIL_APP_PASSWORD") or ""
+        if _user and _pw:
+            result = _send_via_smtp(_user, _pw, to, subject, body)
+            return json.dumps(result, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
 
-        result = service.users().messages().send(
-            userId="me", body={"raw": raw}
-        ).execute()
-
-        return json.dumps({
-            "status": "sent",
-            "message_id": result.get("id", ""),
-            "to": to,
-            "subject": subject,
-        }, ensure_ascii=False, indent=2)
-    except Exception as e:
-        return json.dumps({"error": f"Gmail send failed: {e}"})
+    return json.dumps({
+        "error": "Gmail send failed — no working auth method. "
+        "Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD in Colab Secrets. "
+        "Get an app password at https://myaccount.google.com/apppasswords",
+    })
 
 
 # ── Drive Search Tool ────────────────────────────────────────

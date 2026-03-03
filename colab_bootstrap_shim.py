@@ -114,8 +114,9 @@ try:
 except Exception as _auth_err:
     print(f"[boot] Google API auth skipped: {_auth_err}")
 
-# Export optional Google API keys from Colab Secrets
-for _name in ("GOOGLE_API_KEY", "YOUTUBE_API_KEY", "GOOGLE_SEARCH_CX"):
+# Export optional Google API keys and Gmail credentials from Colab Secrets
+for _name in ("GOOGLE_API_KEY", "YOUTUBE_API_KEY", "GOOGLE_SEARCH_CX",
+              "GMAIL_ADDRESS", "GMAIL_APP_PASSWORD"):
     export_secret_to_env(_name, required=False)
 
 launcher_path = REPO_DIR / "colab_launcher.py"

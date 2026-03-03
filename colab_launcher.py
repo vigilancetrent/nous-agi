@@ -121,6 +121,10 @@ ANTHROPIC_API_KEY = get_secret("ANTHROPIC_API_KEY", default="")
 GOOGLE_API_KEY = get_secret("GOOGLE_API_KEY", default="")
 YOUTUBE_API_KEY = get_secret("YOUTUBE_API_KEY", default="")
 GOOGLE_SEARCH_CX = get_secret("GOOGLE_SEARCH_CX", default="")
+
+# Gmail SMTP credentials (app password — bypasses OAuth entirely)
+GMAIL_ADDRESS = get_secret("GMAIL_ADDRESS", default="")
+GMAIL_APP_PASSWORD = get_secret("GMAIL_APP_PASSWORD", default="")
 GITHUB_USER = get_cfg("GITHUB_USER", default=None, allow_legacy_secret=True)
 GITHUB_REPO = get_cfg("GITHUB_REPO", default=None, allow_legacy_secret=True)
 assert GITHUB_USER and str(GITHUB_USER).strip(), "GITHUB_USER not set. Add it to your config cell (see README)."
@@ -165,6 +169,10 @@ if str(YOUTUBE_API_KEY or "").strip():
     os.environ["YOUTUBE_API_KEY"] = str(YOUTUBE_API_KEY)
 if str(GOOGLE_SEARCH_CX or "").strip():
     os.environ["GOOGLE_SEARCH_CX"] = str(GOOGLE_SEARCH_CX)
+if str(GMAIL_ADDRESS or "").strip():
+    os.environ["GMAIL_ADDRESS"] = str(GMAIL_ADDRESS)
+if str(GMAIL_APP_PASSWORD or "").strip():
+    os.environ["GMAIL_APP_PASSWORD"] = str(GMAIL_APP_PASSWORD)
 
 if str(ANTHROPIC_API_KEY or "").strip():
     ensure_claude_code_cli()
