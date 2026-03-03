@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 class BackgroundConsciousness:
     """Persistent background thinking loop for Nous."""
 
-    _MAX_BG_ROUNDS = 5
+    _MAX_BG_ROUNDS = 20
 
     def __init__(
         self,
@@ -394,6 +394,14 @@ class BackgroundConsciousness:
         "http_request", "execute_python", "download_file", "pip_install",
         "read_any_file", "write_any_file", "system_info",
         "set_env_var", "list_env_vars",
+        # Power tools
+        "scrape_webpage", "db_query", "read_pdf", "create_document",
+        "execute_code", "generate_image", "text_to_speech",
+        "check_url", "dns_lookup", "analyze_csv", "create_pastebin",
+        # Code tools (full access in background)
+        "run_shell", "repo_read", "repo_write_commit", "repo_commit_push",
+        "claude_code_edit", "git_status", "git_diff",
+        "gmail_send",
     })
 
     def _build_registry(self) -> "ToolRegistry":

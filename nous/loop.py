@@ -135,14 +135,14 @@ STATEFUL_BROWSER_TOOLS = frozenset({"browse_page", "browser_action"})
 
 def _truncate_tool_result(result: Any) -> str:
     """
-    Hard-cap tool result string to 15000 characters.
+    Hard-cap tool result string to 50000 characters.
     If truncated, append a note with the original length.
     """
     result_str = str(result)
-    if len(result_str) <= 15000:
+    if len(result_str) <= 50000:
         return result_str
     original_len = len(result_str)
-    return result_str[:15000] + f"\n... (truncated from {original_len} chars)"
+    return result_str[:50000] + f"\n... (truncated from {original_len} chars)"
 
 
 def _execute_single_tool(
@@ -650,10 +650,10 @@ def run_llm_loop(
     # Dedup set for per-task owner messages from Drive mailbox
     _owner_msg_seen: set = set()
     try:
-        MAX_ROUNDS = max(1, int(get_env("NOUS_MAX_ROUNDS", "200")))
+        MAX_ROUNDS = max(1, int(get_env("NOUS_MAX_ROUNDS", "500")))
     except (ValueError, TypeError):
-        MAX_ROUNDS = 200
-        log.warning("Invalid NOUS_MAX_ROUNDS, defaulting to 200")
+        MAX_ROUNDS = 500
+        log.warning("Invalid NOUS_MAX_ROUNDS, defaulting to 500")
     round_idx = 0
     try:
         while True:

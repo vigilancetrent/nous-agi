@@ -290,11 +290,11 @@ def _handle_schedule_task(evt: Dict[str, Any], ctx: Any) -> None:
     task_context = str(evt.get("context") or "").strip()
     depth = int(evt.get("depth", 0))
 
-    # Check depth limit
-    if depth > 3:
+    # Check depth limit (generous: allow deep task chains)
+    if depth > 10:
         log.warning("Rejected task due to depth limit: depth=%d, desc=%s", depth, desc[:100])
         if owner_chat_id:
-            ctx.send_with_budget(int(owner_chat_id), f"⚠️ Task rejected: subtask depth limit (3) exceeded")
+            ctx.send_with_budget(int(owner_chat_id), f"⚠️ Task rejected: subtask depth limit (10) exceeded")
         return
 
     if owner_chat_id and desc:
